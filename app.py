@@ -27,7 +27,11 @@ from flask_migrate import Migrate
 #----------------------------------------------------------------------------#
 
 def format_datetime(value, format='medium'):
-  date = dateutil.parser.parse(value)
+  # date = dateutil.parser.parse(value)
+  if isinstance(value, str):
+    date = dateutil.parser.parse(value)
+  else:
+    date = value
   
   if format == 'full':
       format="EEEE MMMM, d, y 'at' h:mma"
