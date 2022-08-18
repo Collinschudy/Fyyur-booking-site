@@ -35,7 +35,7 @@ class Venue(db.Model):
     seeking_talent = db.Column(db.Boolean, default=False)
     seeking_description = db.Column(db.String(200))
 
-    shows = db.relationship('Show', lazy=True, backref='venue')
+    shows = db.relationship('Show', lazy=True, backref='venue', cascade="all, delete-orphan")
 
 
 
@@ -65,7 +65,7 @@ class Artist(db.Model):
     seeking_venue = db.Column(db.Boolean, default=False)
     seeking_description = db.Column(db.String(200))
 
-    shows = db.relationship('Show', backref='artist', lazy=True)
+    shows = db.relationship('Show', backref='artist', lazy=True, cascade="all, delete-orphan")
 
 
     def __repr__(self):
@@ -81,7 +81,7 @@ class Show(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   artist_id = db.Column(db.Integer, db.ForeignKey('artist.id'), nullable=False)
   venue_id = db.Column(db.Integer, db.ForeignKey('venue.id'), nullable=False)
-  start_time = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now(datetime.timezone.utc))    
+  start_time = db.Column(db.DateTime, nullable=True, default=datetime.datetime.now(datetime.timezone.utc))    
 
 
 

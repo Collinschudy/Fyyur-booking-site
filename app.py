@@ -111,7 +111,7 @@ def show_venue(venue_id):
     past_shows = []
     latest_time = datetime.datetime.now()
     for show in shows:
-      show.artist_name = show.arist.name
+      show.artist_name = show.artist.name
       show.artist_image_link = show.artist.image_link
       
       if show.start_time > latest_time:
@@ -121,12 +121,12 @@ def show_venue(venue_id):
         past_shows.append(show)
         past_shows_count = len(past_shows)
 
-      venue.upcoming_shows = upcoming_shows
-      venue.upcoming_shows_count = upcoming_shows_count
-      venue.past_shows = past_shows
-      venue.past_shows_count = past_shows_count
+    venue.upcoming_shows = upcoming_shows
+    venue.upcoming_shows_count = len(upcoming_shows)
+    venue.past_shows = past_shows
+    venue.past_shows_count = len(past_shows)
 
-    return render_template('pages/show_venue.html', venue=venue)
+  return render_template('pages/show_venue.html', venue=venue)
 
 #  Create Venue
 #  ----------------------------------------------------------------
@@ -178,7 +178,7 @@ def create_venue_submission():
   
   return render_template('pages/home.html')
 
-@app.route('/venues/<venue_id>', methods=['DELETE'])
+@app.route('/venues/<venue_id>/delete', methods=['GET'])
 def delete_venue(venue_id):
   try:
     venue = Venue.query.get(venue_id)
@@ -187,6 +187,7 @@ def delete_venue(venue_id):
     flash('The Venue was deleted successfully')
   except:
     db.session.rollback()
+    print(sys.exc_info())
     flash('oops!, Delete operation failed due to an error.')
   finally:
     db.session.close()
@@ -263,7 +264,7 @@ def delete_artist(artist_id):
         artist = Artist.query.get(artist_id)
         db.session.delete(artist)
         db.session.commit()
-        flash('Artist " + artist.name+ " was deleted successfully!')
+        flash('Artist ' + artist.name + ' was deleted successfully!')
     except:
         db.session.rollback()
         print(sys.exc_info())
@@ -428,7 +429,7 @@ def edit_venue_submission(venue_id):
   
   if form.validate():
     try:
-      venue = Venue.query.get(artist_id)
+      venue = Venue.query.get(venue_id)
       venue.name = form.name.data
       venue.city = form.city.data
       venue.state = form.state.data
@@ -441,7 +442,7 @@ def edit_venue_submission(venue_id):
       venue.facebook_link = form.facebook_link.data
       db.session.add(venue)
       db.session.commit()
-      flash('Venue, ' + form.name.data + 'was updated successfully!')
+      flash('Venue, ' + form.name.data + ' was updated successfully!')
     except:
       db.session.rollback()
       print(sys.exc_info())
@@ -449,7 +450,7 @@ def edit_venue_submission(venue_id):
     finally:
       db.session.close()
   else:
-    flash('update failed. Reason: ' + form.errors)
+    flash('update failed. ')
 
   return redirect(url_for('show_venue', venue_id=venue_id))
 
