@@ -10,9 +10,11 @@ import logging
 from logging import Formatter, FileHandler
 from wtforms import ValidationError
 from flask_wtf import Form
+# import phonenumbers
 import datetime
-# from datetime import datetime
+from datetime import date
 import sys
+
 from forms import *
 from models import *
 
@@ -40,6 +42,11 @@ def format_datetime(value, format='medium'):
   return babel.dates.format_datetime(date, format, locale='en')
 
 app.jinja_env.filters['datetime'] = format_datetime
+
+# def phone_validator(phone_no):
+#     correct = phonenumbers.parse(phone_no, "US")
+#     if not phonenumbers.is_valid_number(correct):
+#         flash(str(ValidationError('Enter a valid US phone number.')))
 
 #----------------------------------------------------------------------------#
 # Controllers.
@@ -102,6 +109,7 @@ def search_venues():
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
   venue = Venue.query.get(venue_id)
+  latest_time = datetime.datetime.now()
   if not venue:
     return redirect(url_for('index'))
 
@@ -125,8 +133,18 @@ def show_venue(venue_id):
     venue.upcoming_shows_count = len(upcoming_shows)
     venue.past_shows = past_shows
     venue.past_shows_count = len(past_shows)
+      # past_shows_query = db.session.query(Show).join(Venue).filter(Show.venue_id==venue.id).filter(show.start_time<latest_time).all()
+      # flash(past_shows_query)
+      # upcoming_shows_query = db.session.query(Show).join(Venue).filter(Show.venue_id==venue.id).filter(show.start_time>latest_time).all()
 
-  return render_template('pages/show_venue.html', venue=venue)
+      # past_shows.append(past_shows_query)
+      # upcoming_shows.append(upcoming_shows_query)
+      # venue.upcoming_shows = upcoming_shows
+      # venue.upcoming_shows_count = len(upcoming_shows)
+      # venue.past_shows = past_shows
+      # venue.past_shows_count = len(past_shows)
+
+    return render_template('pages/show_venue.html', venue=venue)
 
 #  Create Venue
 #  ----------------------------------------------------------------
@@ -142,6 +160,8 @@ def create_venue_submission():
   genres = form.genres.data
   if form.validate():
     try:
+      phone = form.phone.data
+      
       new_venue = Venue(
         name = form.name.data,
         city = form.city.data,
@@ -155,7 +175,7 @@ def create_venue_submission():
         website_link = form.website_link.data,
         facebook_link = form.facebook_link.data
       )
-    
+     
 
 
       db.session.add(new_venue)
@@ -220,7 +240,7 @@ def search_artists():
   }
   for artist in artists_search:
     upcoming_shows_count = 0
-    shows = Show.query.filter_by(artist_id=artist_id).all()
+    shows = Show.query.filter_by(artist_id=artist.id).all()
     for show in shows:
       if show.start_time > latest_time:
         upcoming_shows_count += 1
@@ -239,6 +259,7 @@ def show_artist(artist_id):
   if not artist:
     return render_template('error/404.html')
   else:
+
     shows = artist.shows
     upcoming_shows = []
     past_shows = []
@@ -250,13 +271,21 @@ def show_artist(artist_id):
         upcoming_shows.append(show)
       else:
         past_shows.append(show)
- 
-  artist.upcoming_shows = upcoming_shows
-  artist.upcoming_shows_count = len(upcoming_shows)
-  artist.past_shows = past_shows
-  artist.past_shows_count = len(past_shows)
+    # upcoming_shows = []
+    # past_shows = []
+    # shows = artist.shows
+    # for show in shows:
+    #   past_shows_query = db.session.query(Show).join(Venue).filter(Show.artist_id==artist.id).filter(show.start_time<latest_time).all()
+    #   upcoming_shows_query = db.session.query(Show).join(Venue).filter(Show.artist_id==artist.id).filter(show.start_time>latest_time).all()
 
-  return render_template('pages/show_artist.html', artist=artist)
+      # past_shows.append(past_shows_query)
+      # upcoming_shows.append(upcoming_shows_query)
+      artist.upcoming_shows = upcoming_shows
+      artist.upcoming_shows_count = len(upcoming_shows)
+      artist.past_shows = past_shows
+      artist.past_shows_count = len(past_shows)
+
+    return render_template('pages/show_artist.html', artist=artist)
 
 @app.route("/artists/<artist_id>/delete", methods=["GET"])
 def delete_artist(artist_id):
@@ -390,7 +419,7 @@ def edit_artist_submission(artist_id):
       artist.facebook_link = form.facebook_link.data
       db.session.add(artist)
       db.session.commit()
-      flash('Artist, ' + form.name.data + 'was updated successfully!')
+      flash('Artist, ' + form.name.data + ' was updated successfully!')
     except:
       db.session.rollback()
       print(sys.exc_info())
@@ -398,7 +427,7 @@ def edit_artist_submission(artist_id):
     finally:
       db.session.close()
   else:
-    flash('update failed. Reason: ' + form.errors)
+    flash('update failed. Reason: ' + str(form.errors))
 
   return redirect(url_for('show_artist', artist_id=artist_id))
 
@@ -468,6 +497,8 @@ def create_artist_submission():
 
   if form.validate():
     try:
+      phone = form.phone.data
+      phone_validator(phone)
       new_artist = Artist(
         name = form.name.data,
         city = form.city.data,
@@ -480,7 +511,7 @@ def create_artist_submission():
         website_link = form.website_link.data,
         facebook_link = form.facebook_link.data
       )
-    
+   
 
 
       db.session.add(new_artist)
@@ -495,7 +526,7 @@ def create_artist_submission():
     finally:
       db.session.close()
   else:
-    flash('oops, An error occurred. Venue ' + form.name.data + ' could not be listed.')
+    flash('oops, An error occurred. Venue ' + form.name.data + ' could not be listed.Reason: ' + str(form.errors))
   
   return render_template('pages/home.html')
 
@@ -577,7 +608,7 @@ def create_show_submission():
       db.session.commit()
       flash('Show was successfully listed!')
 
-    except Exception as e:
+    except:
       db.session.rollback()
       print(sys.exc_info())
       flash('Show was not successfully listed.')
@@ -586,7 +617,7 @@ def create_show_submission():
           db.session.close()
   else:
     print(form.errors)
-    flash('Oops, something went wrong!')
+    flash('Oops, something went wrong! Reason: ' + str(form.errors))
 
   return render_template('pages/home.html')
 
