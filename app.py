@@ -10,7 +10,6 @@ import logging
 from logging import Formatter, FileHandler
 from wtforms import ValidationError
 from flask_wtf import Form
-# import phonenumbers
 import datetime
 from datetime import date
 import sys
@@ -43,10 +42,6 @@ def format_datetime(value, format='medium'):
 
 app.jinja_env.filters['datetime'] = format_datetime
 
-# def phone_validator(phone_no):
-#     correct = phonenumbers.parse(phone_no, "US")
-#     if not phonenumbers.is_valid_number(correct):
-#         flash(str(ValidationError('Enter a valid US phone number.')))
 
 #----------------------------------------------------------------------------#
 # Controllers.
@@ -74,7 +69,7 @@ def venues():
       cities_and_states.append({
         'id': venue.id,
         'name': venue.name,
-        'upcoming_shows_count': len(Show.query.filter(Show.venue_id==venue.id).filter(Show.start_time>latest_time).all())
+        'upcoming_shows_count': len(Show.query.filter(Show.venue_id==venue.id).filter(Show.start_time > latest_time).all())
       })
 
     data.append({
@@ -98,7 +93,7 @@ def search_venues():
     data.append({
       'id': venue.id,
       'name': venue.name,
-      'upcoming_shows_count': len(Show.query.filter(Show.venue_id==venue.id).filter(Show.start_time>latest_time).all())
+      'upcoming_shows_count': len(Show.query.filter(Show.venue_id==venue.id).filter(Show.start_time > latest_time).all())
     })
   response={
     "count": len(search_venues),
@@ -114,36 +109,30 @@ def show_venue(venue_id):
     return redirect(url_for('index'))
 
   else:
-    shows = venue.shows
     upcoming_shows = []
     past_shows = []
-    latest_time = datetime.datetime.now()
-    for show in shows:
-      show.artist_name = show.artist.name
-      show.artist_image_link = show.artist.image_link
-      
-      if show.start_time > latest_time:
-        upcoming_shows.append(show)
-        upcoming_shows_count = len(upcoming_shows)
-      else:
-        past_shows.append(show)
-        past_shows_count = len(past_shows)
+    past_shows_query = db.session.query(Show).join(Venue).filter(Show.venue_id==venue_id).filter(Show.start_time <= latest_time).all()
+    upcoming_shows_query = db.session.query(Show).join(Venue).filter(Show.venue_id==venue_id).filter(Show.start_time > latest_time).all()
+    for show in upcoming_shows_query:
 
-    venue.upcoming_shows = upcoming_shows
-    venue.upcoming_shows_count = len(upcoming_shows)
-    venue.past_shows = past_shows
-    venue.past_shows_count = len(past_shows)
-      # past_shows_query = db.session.query(Show).join(Venue).filter(Show.venue_id==venue.id).filter(show.start_time<latest_time).all()
-      # flash(past_shows_query)
-      # upcoming_shows_query = db.session.query(Show).join(Venue).filter(Show.venue_id==venue.id).filter(show.start_time>latest_time).all()
-
-      # past_shows.append(past_shows_query)
-      # upcoming_shows.append(upcoming_shows_query)
-      # venue.upcoming_shows = upcoming_shows
-      # venue.upcoming_shows_count = len(upcoming_shows)
-      # venue.past_shows = past_shows
-      # venue.past_shows_count = len(past_shows)
-
+      upcoming_shows.append({
+      'start_time': format_datetime(str(show.start_time)),
+      'artist_image_link':show.artist.image_link,
+      'artist_id':show.artist_id,
+      'artist_name':show.artist.name
+      })
+    for show in past_shows_query:
+      past_shows.append({
+      'start_time': format_datetime(str(show.start_time)),
+      'artist_image_link':show.artist.image_link,
+      'artist_id':show.artist_id,
+      'artist_name':show.artist.name
+      })
+      venue.upcoming_shows = upcoming_shows
+      venue.upcoming_shows_count = len(upcoming_shows)
+      venue.past_shows = past_shows
+      venue.past_shows_count = len(past_shows)
+    
     return render_template('pages/show_venue.html', venue=venue)
 
 #  Create Venue
@@ -259,31 +248,31 @@ def show_artist(artist_id):
   if not artist:
     return render_template('error/404.html')
   else:
-
-    shows = artist.shows
     upcoming_shows = []
     past_shows = []
-
-    for show in shows:
-      show.venue_name = show.venue.name
-      show.venue_image_link = show.venue.image_link
-      if show.start_time > latest_time:
-        upcoming_shows.append(show)
-      else:
-        past_shows.append(show)
-    # upcoming_shows = []
-    # past_shows = []
-    # shows = artist.shows
-    # for show in shows:
-    #   past_shows_query = db.session.query(Show).join(Venue).filter(Show.artist_id==artist.id).filter(show.start_time<latest_time).all()
-    #   upcoming_shows_query = db.session.query(Show).join(Venue).filter(Show.artist_id==artist.id).filter(show.start_time>latest_time).all()
-
-      # past_shows.append(past_shows_query)
-      # upcoming_shows.append(upcoming_shows_query)
+    past_shows_query = db.session.query(Show).join(Artist).filter(Show.artist_id==artist_id).filter(Show.start_time < latest_time).all()
+    print(past_shows_query)
+    upcoming_shows_query = db.session.query(Show).join(Artist).filter(Show.artist_id==artist_id).filter(Show.start_time > latest_time).all()
+    for show in upcoming_shows_query:
+      upcoming_shows.append({
+      'start_time': format_datetime(str(show.start_time)),
+      'venue_image_link':show.venue.image_link,
+      'venue_id':show.venue_id,
+      'venue_name':show.venue.name
+      })
+  
+    for show in past_shows_query:
+      past_shows.append({
+      'start_time': format_datetime(str(show.start_time)),
+      'venue_image_link':show.venue.image_link,
+      'venue_id':show.venue_id,
+      'venue_name':show.venue.name
+      })
       artist.upcoming_shows = upcoming_shows
       artist.upcoming_shows_count = len(upcoming_shows)
       artist.past_shows = past_shows
       artist.past_shows_count = len(past_shows)
+     
 
     return render_template('pages/show_artist.html', artist=artist)
 
@@ -497,8 +486,6 @@ def create_artist_submission():
 
   if form.validate():
     try:
-      phone = form.phone.data
-      phone_validator(phone)
       new_artist = Artist(
         name = form.name.data,
         city = form.city.data,
